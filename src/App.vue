@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 const catList = ref([])
 fetch('/data/cats.json')
   .then((res) => res.json())
@@ -7,6 +7,46 @@ fetch('/data/cats.json')
     console.log(data)
     catList.value = data.cats
   })
+
+const cart = ref([])
+const addToCart = (cat) => {
+  const itemIdx = cart.value.findIndex((d) => d.name === cat.name)
+  if (itemIdx === -1) {
+    cart.value.push({
+      name: cat.name,
+      price: cat.price,
+      qty: 1,
+    })
+  } else {
+    cart.value[itemIdx].qty++
+  }
+}
+const totalPrice = ref(0)
+
+watch(
+  cart,
+  () => {
+    // do something...
+    let total = 0
+    for (let i = 0; i < cart.value.length; i++) {
+      total += cart.value[i].price * cart.value[i].qty
+    }
+    totalPrice.value = total
+  },
+  { deep: true }
+)
+
+// const totalPrice = computed(() => {
+//   let total = 0
+//   for (let i = 0; i < cart.value.length; i++) {
+//     total += cart.value[i].price * cart.value[i].qty
+//   }
+//   return total
+// })
+
+const removeFromCart = (cat) => {
+  cart.value = cart.value.filter((d) => d.name !== cat.name)
+}
 </script>
 
 <template>
@@ -17,6 +57,8 @@ fetch('/data/cats.json')
           <a class="text-xl btn btn-ghost"
             ><i class="fas fa-gem"></i> 賺很大商店</a
           >
+          // 解bug用
+          <pre>{{ cart }}</pre>
         </div>
         <div class="flex-none">
           <ul class="px-1 menu menu-horizontal">
@@ -46,9 +88,9 @@ fetch('/data/cats.json')
           </figure>
           <div class="card-body">
             <h5 class="card-title">{{ cat.name }}</h5>
-            <p>{{ cat.price }}</p>
+            <p>${{ cat.price }}</p>
             <div class="justify-end card-actions">
-              <button class="btn btn-primary">
+              <button @click="addToCart(cat)" class="btn btn-primary">
                 <i class="fas fa-cat"></i> 認養
               </button>
             </div>
@@ -59,7 +101,8 @@ fetch('/data/cats.json')
 
       <section class="px-8 mt-12">
         <h2 class="text-3xl font-bold">認養清單</h2>
-        <table class="table my-2">
+        <p v-if="cart.length === 0">目前沒有認養貓咪</p>
+        <table v-else class="table my-2">
           <thead>
             <tr class="text-lg">
               <th>名字</th>
@@ -71,41 +114,23 @@ fetch('/data/cats.json')
           </thead>
           <tbody>
             <!-- item start -->
-            <tr class="text-lg">
-              <td>老大</td>
+            <tr v-for="cat in cart" class="text-lg">
+              <td>{{ cat.name }}</td>
               <td>
                 <input
                   type="number"
-                  value="1"
+                  v-model="cat.qty"
                   min="1"
                   class="input input-bordered"
                 />
               </td>
-              <td>$20</td>
-              <td>$20</td>
+              <td>${{ cat.price }}</td>
+              <td>${{ cat.price * cat.qty }}</td>
               <td>
-                <button class="btn btn-xs btn-primary">
-                  <i class="fas fa-trash-alt"></i>
-                </button>
-              </td>
-            </tr>
-            <!-- item end -->
-
-            <!-- item start -->
-            <tr class="text-lg">
-              <td>胖胖</td>
-              <td>
-                <input
-                  type="number"
-                  value="1"
-                  min="1"
-                  class="input input-bordered"
-                />
-              </td>
-              <td>$8.5</td>
-              <td>$8.5</td>
-              <td>
-                <button class="btn btn-xs btn-primary">
+                <button
+                  @click="removeFromCart(cat)"
+                  class="btn btn-xs btn-primary"
+                >
                   <i class="fas fa-trash-alt"></i>
                 </button>
               </td>
@@ -116,12 +141,12 @@ fetch('/data/cats.json')
             <tr>
               <td colspan="2"></td>
               <td>總價</td>
-              <td class="font-bold">$28.50</td>
+              <td class="font-bold">${{ totalPrice }}</td>
               <td></td>
             </tr>
           </tfoot>
         </table>
-        <button class="btn btn-primary">
+        <button @click="cart = []" class="btn btn-primary">
           <i class="fas fa-baby-carriage"></i> 清空認養清單
         </button>
       </section>
